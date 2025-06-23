@@ -26,7 +26,7 @@ steps:
       - '900'
       # Provide more memory for the transformers model
       - '--memory'
-      - '2Gi'
+      - '4Gi'
 images:
   - '${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}:$COMMIT_SHA'
 
