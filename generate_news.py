@@ -1,4 +1,4 @@
-# generate_news.py (Final Corrected Version)
+# generate_news.py (Final Robust Version)
 import feedparser
 from newspaper import Article
 from transformers import pipeline
@@ -17,7 +17,6 @@ RSS_FEEDS = [
 MAX_ARTICLES_PER_FEED = 3
 
 # We will initialize the summarizer once to save time and resources
-# This will still download the model on the first run inside the GitHub Action
 print("Initializing summarization pipeline...")
 summarizer = pipeline("summarization", model="sshleifer/distilbart-cnn-12-6")
 print("Pipeline initialized.")
@@ -28,17 +27,22 @@ def generate_summary(text):
     MIN_TEXT_LENGTH = 200 # Require at least 200 characters to be worth summarizing
     
     if not text or len(text) < MIN_TEXT_LENGTH:
-        # This is our new, smarter check!
         return f"Article text was too short or could not be extracted. (Length: {len(text)} chars)"
 
     try:
         print("Summarizing text...")
-        # The summarizer is already loaded, so this is faster.
         summary_result = summarizer(text, max_length=150, min_length=50, do_sample=False)
-        return summary_result[0]['summary_text']
+        
+        # --- THIS IS THE NEW, ROBUST FIX ---
+        # Check if the result list is valid and not empty before accessing it.
+        if summary_result and len(summary_result) > 0:
+            return summary_result[0]['summary_text']
+        else:
+            # This handles cases where the model returns an empty list [].
+            return "Summarization failed: The AI model returned an empty result for this article."
+            
     except Exception as e:
-        print(f"Summarization pipeline failed: {e}")
-        # This will now only catch errors from the model itself.
+        print(f"Summarization pipeline failed with an exception: {e}")
         return f"An error occurred during summarization: {e}"
 
 
@@ -49,8 +53,6 @@ def build_html():
     for feed_url in RSS_FEEDS:
         feed = feedparser.parse(feed_url)
         
-        # --- THIS IS THE FIXED LINE ---
-        # We now safely get the title, providing a default if it's missing.
         feed_title = feed.feed.get('title', f'Unknown Feed Title ({feed_url})')
         print(f"\n--- Processing feed: {feed_title} ---")
 
@@ -68,15 +70,14 @@ def build_html():
                 print(f"Fetched: {entry.title}")
             except Exception as e:
                 print(f"Could not fetch or parse article {entry.link}: {e}")
-                # Add a failed article entry so we know it was skipped
                 all_articles.append({
                     'title': entry.get('title', 'Title Not Found'),
                     'link': entry.link,
-                    'text': '', # Empty text will be caught by our new check
+                    'text': '',
                     'is_failed': True
                 })
 
-    # --- HTML Generation with New "Feed" Style ---
+    # --- HTML Generation ---
     print("\nGenerating HTML file with new feed style...")
     html_content = """
     <html>
@@ -119,7 +120,7 @@ def build_html():
     for item in all_articles:
         summary_text = generate_summary(item['text'])
         # Check if the summary is one of our error messages and apply a special style
-        summary_class = "summary-error" if "Article text was too short" in summary_text or "An error occurred" in summary_text else ""
+        summary_class = "summary-error" if "failed" in summary_text or "too short" in summary_text or "occurred" in summary_text else ""
         
         html_content += f"""
         <div class="article-card">
