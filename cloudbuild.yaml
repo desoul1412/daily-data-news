@@ -29,3 +29,7 @@ steps:
       - '2Gi'
 images:
   - '${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}:$COMMIT_SHA'
+
+# --- NEW SECTION ADDED TO FIX THE LOGGING ERROR ---
+options:
+  logging: CLOUD_LOGGING_ONLY
