@@ -1,4 +1,4 @@
-# generate_news.py (Updated Version)
+# generate_news.py (Final Corrected Version)
 import feedparser
 from newspaper import Article
 from transformers import pipeline
@@ -48,7 +48,12 @@ def build_html():
     print("Fetching articles from RSS feeds...")
     for feed_url in RSS_FEEDS:
         feed = feedparser.parse(feed_url)
-        print(f"\n--- Processing feed: {feed.feed.title} ---")
+        
+        # --- THIS IS THE FIXED LINE ---
+        # We now safely get the title, providing a default if it's missing.
+        feed_title = feed.feed.get('title', f'Unknown Feed Title ({feed_url})')
+        print(f"\n--- Processing feed: {feed_title} ---")
+
         for entry in feed.entries[:MAX_ARTICLES_PER_FEED]:
             try:
                 article = Article(entry.link)
